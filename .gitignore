@@ -1,0 +1,6 @@
+client/node_modules
+client/.idea
+server/node_modules
+server/.env
+server/coverLetterContent.txt
+server/.idea
