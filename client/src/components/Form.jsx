@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import LanguageSelector from "@marcoparrone/react-language-selector";
 import "react-phone-number-input/style.css";
 import PhoneInput from "react-phone-number-input";
-function Form({ setText }) {
+function Form({ isReady }) {
   const [formFields, setFormFields] = useState({
     name: "",
     email: "",
@@ -27,6 +27,7 @@ function Form({ setText }) {
   }
 
   async function handleFormSubmit(e) {
+    isReady(false);
     e.preventDefault();
     try {
       const response = await fetch("http://localhost:3000/api/cover-letters", {
@@ -47,20 +48,21 @@ function Form({ setText }) {
         }),
       });
       const data = await response.json();
-      setText(data.data);
+      console.log(data.message);
     } catch (error) {
       console.error(error);
     } finally {
-      setFormFields({
-        name: "",
-        email: "",
-        jobTitle: "",
-        jobDescription: "",
-        companyName: "",
-        address: "",
-        experience: "",
-      });
-      setPhoneNumber(null);
+      isReady(true);
+      // setFormFields({
+      //   name: "",
+      //   email: "",
+      //   jobTitle: "",
+      //   jobDescription: "",
+      //   companyName: "",
+      //   address: "",
+      //   experience: "",
+      // });
+      // setPhoneNumber(null);
     }
   }
 

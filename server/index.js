@@ -3,6 +3,7 @@ import "dotenv/config.js";
 import express from "express";
 import cors from "cors";
 import OpenAI from "openai";
+import pdf from "pdf-creator-node";
 
 import trimString from "./helpers/stringTrim.js";
 
@@ -14,8 +15,29 @@ app.use(express());
 app.use(cors());
 
 const coverLetterContent = fs.readFileSync("coverLetterContent.txt", "utf8");
+const html = fs.readFileSync("template.html", "utf8");
 
-app.post("/api/cover-letters", async (req, res) => {
+const options = {
+  format: "A3",
+  orientation: "portrait",
+  border: "10mm",
+  header: {
+    height: "45mm",
+    contents: '<div style="text-align: center;">Cover Letter</div>',
+  },
+  footer: {
+    height: "28mm",
+    // contents: {
+    //   first: "Cover page",
+    //   2: "Second page", // Any page number is working. 1-based index
+    //   default:
+    //       '<span style="color: #444;">{{page}}</span>/<span>{{pages}}</span>', // fallback value
+    //   last: "Last Page",
+    // },
+  },
+};
+
+app.post("/api/cover-letters", async (request, response) => {
   const {
     name,
     email,
@@ -26,7 +48,7 @@ app.post("/api/cover-letters", async (req, res) => {
     experience,
     phoneNumber,
     address,
-  } = req.body;
+  } = request.body;
 
   let finalString = `
 Name: ${name}
@@ -44,7 +66,7 @@ ${coverLetterContent}`;
 
   finalString = trimString(finalString);
 
-  const response = await openai.chat.completions.create({
+  const coverLetterResponse = await openai.chat.completions.create({
     model: "gpt-3.5-turbo",
     messages: [
       {
@@ -59,7 +81,26 @@ ${coverLetterContent}`;
     presence_penalty: 0,
   });
 
-  res.json({ data: response.choices[0].message.content });
+  const document = {
+    html: html.replace(
+      "{{ data }}",
+      coverLetterResponse.choices[0].message.content,
+    ),
+    data: finalString,
+    path: "../client/public/output.pdf",
+    type: "",
+  };
+
+  pdf
+    .create(document, options)
+    .then((res) => {
+      response.send({
+        message: coverLetterResponse.choices[0].message.content,
+      });
+    })
+    .catch((error) => {
+      console.error(error);
+    });
 });
 
 app.listen(process.env.PORT, () => {
