@@ -14,8 +14,14 @@ app.use(express.json());
 app.use(express());
 app.use(cors());
 
-const coverLetterContent = fs.readFileSync("coverLetterContent.txt", "utf8");
-const html = fs.readFileSync("template.html", "utf8");
+let coverLetterContent;
+let html;
+try {
+  coverLetterContent = fs.readFileSync("coverLetterContent.txt", "utf8");
+  html = fs.readFileSync("template.html", "utf8");
+} catch (error) {
+  console.error(error);
+}
 
 const options = {
   format: "A3",
@@ -25,19 +31,14 @@ const options = {
     height: "45mm",
     contents: '<div style="text-align: center;">Cover Letter</div>',
   },
-  footer: {
-    height: "28mm",
-    // contents: {
-    //   first: "Cover page",
-    //   2: "Second page", // Any page number is working. 1-based index
-    //   default:
-    //       '<span style="color: #444;">{{page}}</span>/<span>{{pages}}</span>', // fallback value
-    //   last: "Last Page",
-    // },
-  },
 };
 
 app.post("/api/cover-letters", async (request, response) => {
+  if (!coverLetterContent || !html) {
+    response.status(500);
+    return;
+  }
+
   const {
     name,
     email,
@@ -81,6 +82,13 @@ ${coverLetterContent}`;
     presence_penalty: 0,
   });
 
+  if (!coverLetterResponse) {
+    response
+      .status(500)
+      .send({ message: "The content of the cover letter was not generated" });
+    return;
+  }
+
   const document = {
     html: html.replace(
       "{{ data }}",
@@ -100,6 +108,7 @@ ${coverLetterContent}`;
     })
     .catch((error) => {
       console.error(error);
+      response.status(500).send({ message: "Error creating the pdf" });
     });
 });
 

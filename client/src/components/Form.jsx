@@ -1,9 +1,9 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 import LanguageSelector from "@marcoparrone/react-language-selector";
 import "react-phone-number-input/style.css";
 import PhoneInput from "react-phone-number-input";
-function Form({ isReady }) {
+function Form({ isReady, setIsLoading }) {
   const [formFields, setFormFields] = useState({
     name: "",
     email: "",
@@ -14,7 +14,7 @@ function Form({ isReady }) {
     experience: "",
     address: "",
   });
-  const [phoneNumber, setPhoneNumber] = useState();
+  const [phoneNumber, setPhoneNumber] = useState(null);
 
   function handleLanguageChange() {
     const selectElement = document.getElementById("LanguageSelector");
@@ -27,10 +27,11 @@ function Form({ isReady }) {
   }
 
   async function handleFormSubmit(e) {
+    setIsLoading(true);
     isReady(false);
     e.preventDefault();
     try {
-      const response = await fetch("http://localhost:3000/api/cover-letters", {
+      await fetch("http://localhost:3000/api/cover-letters", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -47,22 +48,21 @@ function Form({ isReady }) {
           phoneNumber,
         }),
       });
-      const data = await response.json();
-      console.log(data.message);
     } catch (error) {
       console.error(error);
     } finally {
       isReady(true);
-      // setFormFields({
-      //   name: "",
-      //   email: "",
-      //   jobTitle: "",
-      //   jobDescription: "",
-      //   companyName: "",
-      //   address: "",
-      //   experience: "",
-      // });
-      // setPhoneNumber(null);
+      setIsLoading(false);
+      setFormFields({
+        name: "",
+        email: "",
+        jobTitle: "",
+        jobDescription: "",
+        companyName: "",
+        address: "",
+        experience: "",
+      });
+      setPhoneNumber(null);
     }
   }
 
