@@ -1,23 +1,37 @@
-import { BrowserRouter, Routes, Route, Link } from "react-router-dom";
+import { useState } from 'react';
+import { PDFViewer } from '@react-pdf/renderer';
 
-import HomePage from "./Pages/HomePage.jsx";
+import MyDocument from './components/MyDocument.jsx';
+import HomePage from './Pages/HomePage.jsx';
 
-import PdfViewerComponent from "./components/PdfViewerComponent.jsx";
-
-import "@react-pdf-viewer/toolbar/lib/styles/index.css";
-import "@react-pdf-viewer/core/lib/styles/index.css";
+import '@react-pdf-viewer/toolbar/lib/styles/index.css';
+import '@react-pdf-viewer/core/lib/styles/index.css';
 
 function App() {
-  return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/client/" element={<HomePage />} />
-        <Route
-          path="/client/cover-letter/"
-          element={<PdfViewerComponent document="/output.pdf" />}
-        />
-      </Routes>
-    </BrowserRouter>
+  const [data, setData] = useState({
+    coverLetter: [],
+    name: '',
+    email: '',
+    address: '',
+    jobTitle: '',
+  });
+
+  const [phoneNumber, setPhoneNumber] = useState(null);
+  const [ready, isReady] = useState(false);
+
+  return ready ? (
+    <PDFViewer className='w-full h-screen'>
+      <MyDocument data={data} phoneNumber={phoneNumber} />
+    </PDFViewer>
+  ) : (
+    <HomePage
+      ready={ready}
+      isReady={isReady}
+      setData={setData}
+      data={data}
+      phoneNumber={phoneNumber}
+      setPhoneNumber={setPhoneNumber}
+    />
   );
 }
 

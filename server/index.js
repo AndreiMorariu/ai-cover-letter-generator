@@ -1,11 +1,8 @@
-import * as fs from "fs";
-import "dotenv/config.js";
-import express from "express";
-import cors from "cors";
-import OpenAI from "openai";
-import pdf from "pdf-creator-node";
-
-import trimString from "./helpers/stringTrim.js";
+import * as fs from 'fs';
+import 'dotenv/config.js';
+import express from 'express';
+import cors from 'cors';
+import OpenAI from 'openai';
 
 const app = express();
 const openai = new OpenAI({ apiKey: process.env.API_KEY });
@@ -14,65 +11,25 @@ app.use(express.json());
 app.use(express());
 app.use(cors());
 
-let coverLetterContent;
-let html;
-try {
-  coverLetterContent = fs.readFileSync("coverLetterContent.txt", "utf8");
-  html = fs.readFileSync("template.html", "utf8");
-} catch (error) {
-  console.error(error);
-}
+app.post('/api/cover-letters', async (request, response) => {
+  if (!request.body) response.status(403).send({ message: 'Content mising' });
 
-const options = {
-  format: "A3",
-  orientation: "portrait",
-  border: "10mm",
-  header: {
-    height: "45mm",
-    contents: '<div style="text-align: center;">Cover Letter</div>',
-  },
-};
+  const { jobTitle, jobDescription, companyName, language, experience } =
+    request.body;
 
-app.post("/api/cover-letters", async (request, response) => {
-  if (!coverLetterContent || !html) {
-    response.status(500);
-    return;
-  }
+  let prompt = `
+  Job Title: ${jobTitle}
+  Company name: ${companyName}
+  Previous experience: ${experience}
+  Cover letter language: ${language}
+  Job description: ${jobDescription}`;
 
-  const {
-    name,
-    email,
-    jobTitle,
-    jobDescription,
-    companyName,
-    language,
-    experience,
-    phoneNumber,
-    address,
-  } = request.body;
-
-  let finalString = `
-Name: ${name}
-Email: ${email}
-Phone number: ${phoneNumber}
-address: ${address}
-Job Title: ${jobTitle}
-Company name: ${companyName}
-Previous experience: ${experience}
-Language: ${language} 
-Job description: 
-"${jobDescription}".
-
-${coverLetterContent}`;
-
-  finalString = trimString(finalString);
-
-  const coverLetterResponse = await openai.chat.completions.create({
-    model: "gpt-3.5-turbo",
+  const firstParagraph = await openai.chat.completions.create({
+    model: 'gpt-3.5-turbo',
     messages: [
       {
-        role: "user",
-        content: finalString,
+        role: 'user',
+        content: `${prompt}\n. Imagine you are the person above. Create a single paragraph in which you will convey who you are, what position you are interested in and summarize what you have to offer. Do not put placeholders, not opening or closing formulas such as 'Dear...', 'Sincerly...'. Just a single paragraph.`,
       },
     ],
     temperature: 1,
@@ -82,36 +39,50 @@ ${coverLetterContent}`;
     presence_penalty: 0,
   });
 
-  if (!coverLetterResponse) {
+  const secondParagraph = await openai.chat.completions.create({
+    model: 'gpt-3.5-turbo',
+    messages: [
+      {
+        role: 'user',
+        content: `${prompt}\n. Imagine you are the person above. Create a single paragraph in which you will focus on you are a great fit drawing parallels between the experience included in the resume and the qualifications on the job description. Do not put placeholders, not opening or closing formulas such as 'Dear...', 'Sincerly...'. Just a single paragraph.`,
+      },
+    ],
+    temperature: 1,
+    max_tokens: 500,
+    top_p: 1,
+    frequency_penalty: 0,
+    presence_penalty: 0,
+  });
+
+  const thirdParagraph = await openai.chat.completions.create({
+    model: 'gpt-3.5-turbo',
+    messages: [
+      {
+        role: 'user',
+        content: `${prompt}\n. Imagine you are the person above. Create a single paragraph in which restate your interest in the organization and/or job and summarize what you have to offer and thank the reader for their time and consideration. Do not put placeholders, not opening or closing formulas such as 'Dear...', 'Sincerly...'. Just a single paragraph.`,
+      },
+    ],
+    temperature: 1,
+    max_tokens: 500,
+    top_p: 1,
+    frequency_penalty: 0,
+    presence_penalty: 0,
+  });
+
+  if (!firstParagraph || !secondParagraph || !thirdParagraph)
     response
       .status(500)
-      .send({ message: "The content of the cover letter was not generated" });
-    return;
+      .send({ error: 'The content of the cover letter was not generated' })
+      .end();
+  else {
+    response.send([
+      firstParagraph.choices[0].message,
+      secondParagraph.choices[0].message,
+      thirdParagraph.choices[0].message,
+    ]);
   }
-
-  const document = {
-    html: html.replace(
-      "{{ data }}",
-      coverLetterResponse.choices[0].message.content,
-    ),
-    data: finalString,
-    path: "../client/public/output.pdf",
-    type: "",
-  };
-
-  pdf
-    .create(document, options)
-    .then((res) => {
-      response.send({
-        message: coverLetterResponse.choices[0].message.content,
-      });
-    })
-    .catch((error) => {
-      console.error(error);
-      response.status(500).send({ message: "Error creating the pdf" });
-    });
 });
 
 app.listen(process.env.PORT, () => {
-  console.log("Listening");
+  console.log('Listening');
 });

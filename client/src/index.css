@@ -3,11 +3,5 @@
 @tailwind utilities;
 
 .PhoneInputInput:focus-visible {
-    outline: none;
+  outline: none;
 }
-
-body {
-    padding: 1rem;
-}
-
-

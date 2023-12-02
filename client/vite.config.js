@@ -1,11 +1,13 @@
-import { defineConfig } from "vite";
-import react from "@vitejs/plugin-react";
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
 
 export default defineConfig({
-  base: "/client/", // Setează acest lucru la ruta de bază a proiectului tău pe server
+  base: '/client/',
   build: {
-    // ...
-    publicDir: "public", // Asigură-te că acesta arată către directorul public din proiectul tău
+    publicDir: 'public',
   },
   plugins: [react()],
+  rules: {
+    'react/prop-types': 0,
+  },
 });
